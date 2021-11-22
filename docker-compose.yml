@@ -1,4 +1,4 @@
-version: "2.4"
+version: "3"
 services:
   sonarr:
     image: lscr.io/linuxserver/sonarr
@@ -9,7 +9,7 @@ services:
       - TZ=Europe/London
     volumes:
       - /dockerconfig/sonarr/config:/config
-      - /media:/media #optional
+      - /media:/media 
     ports:
       - 8989:8989
     restart: unless-stopped
@@ -22,7 +22,7 @@ services:
       - TZ=Europe/London
     volumes:
       - /dockerconfig/radarr/config:/config
-       - /media:/media #optional
+      - /media:/media 
     ports:
       - 7878:7878
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
       - TZ=Europe/London
     volumes:
       - /dockerconfig/deluge/config:/config
-       - /media:/media 
+      - /media:/media 
     ports:
       - 8112:8112
       - 6881:6881
@@ -46,7 +46,7 @@ services:
     container_name: "sabnzbd"
     volumes:
         - /dockerconfig/sabnzbd/config:/config
-         - /media:/media 
+        - /media:/media 
     ports:
         - "8080:8080"
     restart: always
@@ -88,8 +88,8 @@ services:
     image: lscr.io/linuxserver/ombi
     container_name: ombi
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=0
+      - PGID=0
       - TZ=Europe/London
       - BASE_URL=/ombi #optional
     volumes:
@@ -97,3 +97,12 @@ services:
     ports:
       - 3579:3579
     restart: unless-stopped
+  portainer:
+    image: 'cr.portainer.io/portainer/portainer-ce:2.9.3'
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+      - '9000:9000'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /dockerconfig/portainer/config:/data
