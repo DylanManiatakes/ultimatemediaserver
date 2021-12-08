@@ -2,6 +2,22 @@
 - This is a collection of docker containers that work in tandem to provide what I believe to be the ultimate home media server.
 - There are two Scripts in the Repo, if you already have a docker environment setup you can just use the docker-compose file that has all the paths and variables pre-mapped.
 - This is an example of a service within a docker compose folder:
+
+appname:
+    image: imageurl
+    container_name: appname
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - /dockerconfig/appname/config:/config 
+    ports:
+      - 1234:1234
+    restart: unless-stopped
+    
+   Explaination of these variables are as follows:
+    
 appname: #This is just a header for the docker environment to divide the containers
     image: imageurl # This is the image url that docker will pull to build the container
     container_name: appname # This will be the name seen in portainer and the docker cli
