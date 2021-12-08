@@ -1,5 +1,6 @@
 # ultimatemediaserver
 - This is a collection of docker containers that work in tandem to provide what I believe to be the ultimate home media server.
+- You can follow along with the Videos in this playlist: https://www.youtube.com/playlist?list=PLuIcyDQjJwFoxputJfMey3EIkhMYl6fY0
 - There are two Scripts in the Repo, if you already have a docker environment setup you can just use the docker-compose file that has all the paths and variables pre-mapped.
 - This is an example of a service within a docker compose folder:
 
