@@ -3,36 +3,21 @@
 - There are two Scripts in the Repo, if you already have a docker environment setup you can just use the docker-compose file that has all the paths and variables pre-mapped.
 - This is an example of a service within a docker compose folder:
 
-appname:
-    image: imageurl
-    container_name: appname
-    environment:
-      - PUID=0
-      - PGID=0
-      - TZ=Europe/London
-    volumes:
-      - /dockerconfig/appname/config:/config 
-    ports:
-      - 1234:1234
-    restart: unless-stopped
-    
-   Explaination of these variables are as follows:
-    
-appname: #This is just a header for the docker environment to divide the containers
-    image: imageurl # This is the image url that docker will pull to build the container
-    container_name: appname # This will be the name seen in portainer and the docker cli
-    environment: # these are env. variables that can change what the container does
-      - PUID=0 # This is a user code giving the container the access of a root user, this DOES NOT mean the container can access the main machine just makes interlinking easier.
-      - PGID=0 # Same as above but this is the group variable.
-      - TZ=Europe/London # Time Zone, not all containers have this and in my experience its just about useless as this can be set within the container 9/10 times
-    volumes: # Volumes are where the container will store data in relation to the HOST Machine. The format is /PathOnHost:/PathInContainer
-      - /dockerconfig/appname/config:/config # For Ease of use, troubleshooting and possible cloning I store all the containers in a created folder so all files can easily be accessed
-      on the host.
-    ports: #Ports that the container will use in the format of: - PortOnHOST:PortinContainer | This can be used to change the port on the host to avoid port conflicts but most 
+# appname: // This is just a header for the docker environment to divide the containers
+    image: imageurl // This is the image url that docker will pull to build the container
+    container_name: appname // This will be the name seen in portainer and the docker cli
+    environment: // these are env. variables that can change what the container does
+      - PUID=0 // This is a user code giving the container the access of a root user, this DOES NOT mean the container can access the main machine just makes interlinking easier.
+      - PGID=0 // Same as above but this is the group variable.
+      - TZ=Europe/London // Time Zone, not all containers have this and in my experience its just about useless as this can be set within the container 9/10 times
+    volumes: // Volumes are where the container will store data in relation to the HOST Machine. The format is /PathOnHost:/PathInContainer
+      - /dockerconfig/appname/config:/config // For Ease of use, troubleshooting and possible cloning I store all the containers in a created folder so all files can easily be accessed on the host
+    ports: // Ports that the container will use in the format of: - PortOnHOST:PortinContainer | This can be used to change the port on the host to avoid port conflicts but most 
     containers will just let you change the whole string ex. 1111 on the host could point to 1234 in that container. But most containers ive come across will just let you do 1111:1111
+      - 1234:1234 
+    restart: unless-stopped // This is the restart policy and can be changed later.
+
     
-      - 1234:1234
-    restart: unless-stopped #This is the restart policy and can be changed later.
     
 - The second script is an .sh file and what it does is install docker and docker-compose as well as fetch the compose file from this repo and run it. This basically is a one command 
  way to build a full docker service. Great for noobs.
@@ -63,12 +48,15 @@ appname: #This is just a header for the docker environment to divide the contain
  work its magic.
  NOTE if you already have any of the containers in the compose file it will error out due to conflicts.
  
- -Updating
+ - Updating
  I have had problems with watchtower, docker container that can auto update however if you ever find want to check for updates or just force an update you can run 
  sudo docker-compose up again. This will not overwrite your existing configs but it will check for new images and pull them if there are new versions. 
  This can also be done within portainer under the stacks tab. "stacks" in portainer is basically docker-compose with a gui. 
  
- -ADDING MORE CONTAINERS
+ - ADDING MORE CONTAINERS
  You can add more containers as you see fit in portainer but I would recommend adding them using the docker-compose file only because it will teach you more of the workings of
  docker but also keep those containers updated with the rest. 
+
+
+
 
