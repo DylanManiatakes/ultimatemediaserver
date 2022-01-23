@@ -20,7 +20,7 @@
       - 1234:1234 
     restart: unless-stopped // This is the restart policy and can be changed later.
 
-    
+  # More Info 
     
 - The second script is an .sh file and what it does is install docker and docker-compose as well as fetch the compose file from this repo and run it. This basically is a one command 
  way to build a full docker service. Great for noobs.
@@ -34,7 +34,7 @@
 - Ombi is an API connection that allows one user interface for adding movies and tv shows
 - You will notice I did not include a media front end. Personally I like and use Plex but many prefer Emby and with both being very simple to install I opted to not include either in
  this script. 
- 
+  # Installing
  - INSTALL INSTRUCTIONS FROM THE SH SCRIPT
  you will need a linux machine with root access or the windows subsystem for linux installed to use the script (Sorry Mac Guys)
  simply run wget https://raw.githubusercontent.com/DylanManiatakes/ultimatemediaserver/main/dockermediaserver.sh
