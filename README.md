@@ -2,9 +2,11 @@
 - This is a collection of docker containers that work in tandem to provide what I believe to be the ultimate home media server.
 - You can follow along with the Videos in this playlist: https://www.youtube.com/playlist?list=PLuIcyDQjJwFoxputJfMey3EIkhMYl6fY0
 - There are two Scripts in the Repo, if you already have a docker environment setup you can just use the docker-compose file that has all the paths and variables pre-mapped.
-- This is an example of a service within a docker compose folder:
+- This is an example of a service within a docker compose file:
 
-# appname: // This is just a header for the docker environment to divide the containers
+ # docker-compose
+ 
+    appname: // This is just a header for the docker environment to divide the containers
     image: imageurl // This is the image url that docker will pull to build the container
     container_name: appname // This will be the name seen in portainer and the docker cli
     environment: // these are env. variables that can change what the container does
@@ -50,7 +52,7 @@
  NOTE if you already have any of the containers in the compose file it will error out due to conflicts.
  
  - Updating
- I have had problems with watchtower, docker container that can auto update however if you ever find want to check for updates or just force an update you can run 
+ I have had problems with watchtower, docker container that can auto update however if you ever want to check for updates or just force an update you can run 
  sudo docker-compose up again. This will not overwrite your existing configs but it will check for new images and pull them if there are new versions. 
  This can also be done within portainer under the stacks tab. "stacks" in portainer is basically docker-compose with a gui. 
  
