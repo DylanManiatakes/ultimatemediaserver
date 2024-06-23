@@ -398,4 +398,62 @@ services:
     labels:
     restart: unless-stopped #Restart the container if it stops
 
+  # Plex Service
+  #
+  # This service runs the Plex Media Server application, which is a media server for video and audio content.
+  # The service uses the 'plexinc/pms-docker:latest' Docker image and runs the Plex container.
+  # The container is named based on the PLEX_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  #   - PLEX_CLAIM: The claim token for the Plex server
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/plex/config:/config
+  #   - ${MEDIA}:/media
+  # The service is set to restart unless it is manually stopped.
+  plex:
+    image: 'plexinc/pms-docker:latest'
+    container_name: ${PLEX_INSTANCE_NAME} #plex is the name of the container
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    volumes:
+      - ${DOCKERCONFIG}/plex/config:/config
+      - ${MEDIA}:/media
+    ports:
+      - ${PLEX_PORT} #Public HTTP Port usually 32400 for Plex
+    restart: unless-stopped
+
+  # Jellyfin Service
+  #
+  # This service runs the Jellyfin Media Server application, which is a media server for video and audio content.
+  # The service uses the 'ghcr.io/jellyfin/jellyfin:latest' Docker image and runs the Jellyfin container.
+  # The container is named based on the JELLYFIN_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  #   - JELLYFIN_ADMIN_PASSWORD: The password for the Jellyfin admin user
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/jellyfin/config:/config
+  #   - ${MEDIA}:/media
+  # The service is set to restart unless it is manually stopped.
+  jellyfin:
+    image: 'ghcr.io/jellyfin/jellyfin:latest'
+    container_name: ${JELLYFIN_INSTANCE_NAME} #jellyfin is the name of the container
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - JELLYFIN_ADMIN_PASSWORD=${JELLYFIN_ADMIN_PASSWORD}
+    volumes:
+      - ${DOCKERCONFIG}/jellyfin/config:/config
+      - ${MEDIA}:/media
+    ports:
+      - ${JELLYFIN_PORT} #Public HTTP Port usually 8096 for Jellyfin
+    restart: unless-stopped
+
 
