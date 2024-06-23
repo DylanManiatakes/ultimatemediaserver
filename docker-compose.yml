@@ -1,108 +1,401 @@
+# This Docker Compose file defines a set of services that make up a media management system.
+# The services include Sonarr, Radarr, Deluge, Sabnzbd, Nginx Proxy Manager, a database, Ombi, and Portainer.
+#
+# Each service is configured with environment variables, volume mounts, and port mappings to integrate it with the rest of the system.
+# The "env_file" field specifies that environment variables should be loaded from a ".env" file, which is likely used to store sensitive configuration details like usernames, passwords, and API keys.
+
+# Version specifies the version of the Docker Compose file format.
 version: "3"
+
+# Services define the different containers that make up the system.
 services:
+  # Sonarr service
+  # This service runs the Sonarr application, which is a PVR for usenet and bittorrent users.
+  # It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them.
+  # It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.
   sonarr:
+    # The image specifies the Docker image to use for this service.
     image: lscr.io/linuxserver/sonarr
+    # The labels section specifies the labels to apply to the container.
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    # The container_name specifies the name of the Docker container.
     container_name: sonarr
+    # The environment section specifies the environment variables to set for the container.
     environment:
-      - PUID=0
-      - PGID=0
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    # The volumes section specifies the volumes to mount inside the container.
     volumes:
-      - /dockerconfig/sonarr/config:/config
-      - /media:/media 
+      - ${DOCKERCONFIG}/sonarr:/config
+      - ${MEDIA}:/media
+    # The ports section specifies the ports to expose on the host machine.
     ports:
-      - 8989:8989
+      - ${SONARR_PORT} # Public HTTP Port usually 8989 for Sonarr
+    # The restart policy specifies how the container should be restarted if it fails.
     restart: unless-stopped
+
+  # Radarr service
+  # This service runs the Radarr application, which is a PVR (Personal Video Recorder) application that can monitor multiple RSS feeds for new movie releases and automatically download them.
+  # It can also be configured to upgrade the quality of existing movie files when a better quality version becomes available.
   radarr:
     image: lscr.io/linuxserver/radarr
     container_name: radarr
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
     environment:
-      - PUID=0
-      - PGID=0
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
-      - /dockerconfig/radarr/config:/config
-      - /media:/media 
+      - ${DOCKERCONFIG}/radarr:/config
+      - ${MEDIA}:/media
     ports:
-      - 7878:7878
+      - ${RADARR_PORT} # Public HTTP Port usually 7878 for Radarr
     restart: unless-stopped
-  deluge:
-    image: lscr.io/linuxserver/deluge
-    container_name: deluge
-    environment:
-      - PUID=0
-      - PGID=0
-      - TZ=Europe/London
-    volumes:
-      - /dockerconfig/deluge/config:/config
-      - /media:/media 
-    ports:
-      - 8112:8112
-      - 6881:6881
-      - 6881:6881/udp
-    restart: unless-stopped
+
+  # Sabnzbd service
+  # This service runs the Sabnzbd application, which is a NZB (Usenet) downloader.
+  # It can monitor RSS feeds for new NZB files and download them.
   sabnzbd:
     image: "sabnzbd/sabnzbd"
-    container_name: "sabnzbd"
+    container_name: ${SABNZBD_INSTANCE_NAME} #sabnzbd is the name of the container
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
     volumes:
-        - /dockerconfig/sabnzbd/config:/config
-        - /media:/media 
+      - ${DOCKERCONFIG}/sabnzbd/config:/config
+      - ${MEDIA}:/media
     ports:
-        - "8080:8080"
+      - ${SABNZBD_PORT} #8080 is the port of the container
     restart: always
+
+  # Nginx Proxy Manager service
+  # This service runs the Nginx Proxy Manager application, which is a web-based interface for managing reverse proxies and SSL/TLS certificates.
   nginx-proxy:
     image: 'jc21/nginx-proxy-manager:latest'
     restart: unless-stopped
     ports:
-      # These ports are in format <host-port>:<container-port>
-      - '80:80' # Public HTTP Port
-      - '443:443' # Public HTTPS Port
-      - '81:81' # Admin Web Port
-      # Add any other Stream port you want to expose
-      # - '21:21' # FTP
+      - ${NPM_HTTP_PORT} # Public HTTP Port usually 80
+      - ${NPM_HTTPS_PORT} # Public HTTPS Port usually 443
+      - ${NPM_ADMIN_PORT} # Admin Web Port usually 81
     environment:
-      DB_MYSQL_HOST: "db"
-      DB_MYSQL_PORT: 3306
-      DB_MYSQL_USER: "npm"
-      DB_MYSQL_PASSWORD: "npm"
-      DB_MYSQL_NAME: "npm"
-      # Uncomment this if IPv6 is not enabled on your host
-      # DISABLE_IPV6: 'true'
+      DB_MYSQL_HOST: ${DB_HOST}
+      DB_MYSQL_PORT: ${DB_PORT}
+      DB_MYSQL_USER: ${NPM_DB_USER}
+      DB_MYSQL_PASSWORD: ${DB_PASSWORD}
+      DB_MYSQL_NAME: ${NPM_DB_NAME}
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
     volumes:
-      - /dockerconfig/nginx-proxy/data:/data
-      - /dockerconfig/nginx-proxy/letsencrypt:/etc/letsencrypt
-    depends_on:
-      - db
-
-  db:
-    image: 'jc21/mariadb-aria:latest'
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: 'npm'
-      MYSQL_DATABASE: 'npm'
-      MYSQL_USER: 'npm'
-      MYSQL_PASSWORD: 'npm'
-    volumes:
-      - /dockerconfig/nginx-proxy/mysql:/var/lib/mysql
+      - ${DOCKERCONFIG}/nginx-proxy/data:/data
+      - ${DOCKERCONFIG}/nginx-proxy/letsencrypt:/etc/letsencrypt
+  # Ombi service
+  # This service runs the Ombi application, which is a web-based interface for requesting media content.
   ombi:
     image: lscr.io/linuxserver/ombi
-    container_name: ombi
+    container_name: ${OMBI_INSTANCE_NAME} #ombi is the name of the container
     environment:
-      - PUID=0
-      - PGID=0
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - BASE_URL=/ombi #optional
     volumes:
-      - /dockerconfig/ombi/config:/config
+      - ${DOCKERCONFIG}/ombi/config:/config
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
     ports:
-      - 3579:3579
+      - ${OMBIPORT} #3579 for ombi
     restart: unless-stopped
+
+  # Portainer service
+  # This service runs the Portainer application, which is a web-based interface for managing Docker containers and resources.
   portainer:
     image: 'cr.portainer.io/portainer/portainer-ce:2.9.3'
     restart: unless-stopped
     ports:
-      - '8000:8000'
-      - '9000:9000'
+      - ${PORTAINER_PORT} #Public HTTP Port usually 8000 for Portainer
+      - ${PORTAINER_DOCKER_API_PORT} #Public Docker API Port usually 9000 for Portainer
+    labels:
+      - com.centurylinklabs.watchtower.enable=true #Enable watchtower to automatically update the image
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /dockerconfig/portainer/config:/data
+      - ${DOCKERCONFIG}/portainer/config:/data
+
+  #AudioBookShelf service
+  # This service runs the AudioBookShelf application, which is a web-based interface for managing audio books.
+  # This service runs the AudioBookShelf application, which is a web-based interface for managing audio books.
+  # The service uses the 'lscr.io/linuxserver/audiobookshelf:latest' Docker image and runs the AudioBookShelf container.
+  # The container is named based on the AUDIOBOOKSHELF_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/audiobookshelf/config: The configuration directory for AudioBookShelf
+  #   - ${MEDIA}: The media directory containing the audio books
+  #   - ${DOCKERCONFIG}/audiobookshelf/metadata: The metadata directory for AudioBookShelf
+  # The service exposes the AudioBookShelf HTTP port specified by the AUDIOBOOKSHELF_PORT environment variable.
+  # The service is set to restart unless it is manually stopped.
+  audiobookshelf:
+    image: 'lscr.io/linuxserver/audiobookshelf:latest'
+    container_name: ${AUDIOBOOKSHELF_INSTANCE_NAME} #audiobookshelf is the name of the container
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DOCKERCONFIG}/audiobookshelf/config:/config
+      - ${MEDIA}:/media
+      - ${DOCKERCONFIG}/audiobookshelf/metadata:/metadata
+    ports:
+      - ${AUDIOBOOKSHELF_PORT} #Public HTTP Port usually 13378 for audiobookshelf
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    restart: unless-stopped
+
+  #UniFi Controller service
+  # This service runs the UniFi Controller application, which is a web-based interface for managing UniFi devices.
+  # The service uses the 'lscr.io/linuxserver/unifi-controller:latest' Docker image and runs the UniFi Controller container.5 bg-gray-900">
+  # The container is named based on the UNIFI_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/unifi/config: The configuration directory for UniFi
+  #   - ${DOCKERCONFIG}/unifi/data: The data directory for UniFi
+  # The service exposes the UniFi Controller HTTP port specified by the UNIFI_PORT environment variable.
+  # The service is set to restart unless it is manually stopped.
+  unifi-controller:
+    image: 'lscr.io/linuxserver/unifi-controller:latest'
+    container_name: ${UNIFI_INSTANCE_NAME} #unifi is the name of the container
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DOCKERCONFIG}/unifi/config:/config
+    labels:
+      - com.centurylinklabs.watchtower.enable=true #Enable watchtower to automatically update the image
+    ports:
+      - ${UNIFI_PORT} #Public HTTP Port usually 8080 for unifi
+      - ${UNIFI_SSL_PORT} #Public HTTPS Port usually 8443 for unifi
+      - ${UNIFI_APP_PORT} #Public App Port usually 3478 for unifi
+      - ${UNIFI_SERVICE_PORT} #Public Service Port usually 10001 for unifi
+    restart: unless-stopped
+
+
+  # MySQL service
+  #
+  # This service runs the MySQL database server.
+  # The service uses the 'mysql:8' Docker image and runs the MySQL container.
+  # The container is named based on the MYSQL_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - MYSQL_ROOT_PASSWORD: The password for the root user
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/MySQL/data: The data directory for MySQL
+  # The service is set to restart unless it is manually stopped.
+  #MySQL service
+  # This service runs the MySQL database server.
+  # The service uses the 'mysql:5.7' Docker image and runs the MySQL container.
+  # The container is named based on the MYSQL_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - MYSQL_ROOT_PASSWORD: The password for the root user
+  #   - MYSQL_DATABASE: The name of the database
+  #   - MYSQL_USER: The name of the user
+  #   - MYSQL_PASSWORD: The password for the user
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/mysql/data: The data directory for MySQL
+  mysql:
+    image: 'mysql:8'
+    container_name: ${MYSQL_INSTANCE_NAME} #mysql is the name of the container
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ${DOCKERCONFIG}/MySQL/data:/var/lib/mysql
+    ports:
+      - ${DB_PORT}
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    restart: unless-stopped
+
+  # Adminer service
+  #
+  # This service runs the Adminer web interface for managing databases.
+  # The service uses the 'adminer:latest' Docker image and runs the Adminer container.
+  # The container is named based on the ADMINER_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - ADMINER_DEFAULT_SERVER: The default server to connect to
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/adminer/data: The data directory for Adminer
+  # The service is set to restart unless it is manually stopped.
+  adminer:
+    image: 'adminer:latest'
+    container_name: ${ADMINER_INSTANCE_NAME} #adminer is the name of the container
+    environment:
+    ports:
+      - ${ADMINER_PORT} #Public HTTP Port usually 8080 for adminer
+    volumes:
+      - ${DOCKERCONFIG}/adminer/data:/var/lib/adminer
+    restart: unless-stopped
+
+  # Immich service
+  #
+  # This service runs the Immich application, which is a web-based interface for viewing and sharing images.
+  # The service uses the 'immich/immich:latest' Docker image and runs the Immich container.
+  # The container is named based on the IMMIH_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/immich/config:/config
+  #   - ${DOCKERCONFIG}/immich/data:/data
+  immich-server:
+    image: 'ghcr.io/immich-app/immich-server:latest'
+    container_name: ${IMMIH_SERVER_INSTANCE_NAME} #immich is the name of the container
+    volumes:
+      - ${DOCKERCONFIG}/Immich/config:/config
+      - ${MEDIA}/Photos:/usr/src/app/upload
+      - ${MEDIA}/Photos/google-dump:/usr/src/app/external #Optional if your importing photos from google photos into Immich
+    ports:
+      - ${IMMIH_SERVER_PORT} #Public HTTP Port usually 3000 for immich
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DB_DATABASE_NAME='immich'
+      - DB_USER_NAME='postgres'
+      - DB_PASSWORD='H7Hhd7d7sjwn222'
+      - DB_HOSTNAME='immich_postgres'
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    command: ['start.sh''immich']
+    depends_on:
+      - immich-redis
+      - immich-database
+    restart: unless-stopped
+
+  immich-redis:
+    image: 'registry.hub.docker.com/library/redis:6.2-alpine@sha256:51d6c56749a4243096327e3fb964a48ed92254357108449cb6e23999c37773c5'
+    container_name: ${IMMIH_REDIS_INSTANCE_NAME} #immich is the name of the container
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    restart: unless-stopped
+
+  immich-database:
+    image: 'registry.hub.docker.com/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0'
+    container_name: ${IMMIH_DATABASE_INSTANCE_NAME} #immich is the name of the container
+    environment:
+      - POSTGRES_USER={DB_USER_NAME}
+      - POSTGRES_PASSWORD={DB_PASSWORD}
+      - POSTGRES_DB={DB_DATABASE_NAME}
+    volumes:
+      - ${DOCKERCONFIG}/Immich/immich_pgdata:/var/lib/postgresql/data
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    restart: unless-stopped
+
+  immich-microservices:
+    image: 'ghcr.io/immich-app/immich-server:latest'
+    container_name: ${IMMIH_MICROSERVICES_INSTANCE_NAME} #immich-microservices is the name of the container
+    command: ['start.sh''microservices']
+    volumes:
+      - ${DOCKERCONFIG}/Immich/config:/config
+      - ${MEDIA}/Photos:/usr/src/app/upload
+      - ${MEDIA}/Photos/google-dump:/usr/src/app/external #Optional if your importing photos from google photos into Immich
+    environment:
+      = DB_DATABASE_NAME='immich'
+      - DB_USER_NAME='postgres'
+      - DB_PASSWORD='H7Hhd7d7sjwn222'
+      - DB_HOSTNAME='immich_postgres'
+      - REDIS_HOSTNAME='immich_redis'
+      - UPLOAD_LOCATION=${MEDIA}/Photos
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    restart: unless-stopped
+  # Jellyseerr Service
+  #
+  # This service runs the Jellyseerr application, which is a web-based application for viewing and sharing music.
+  # The service uses the 'fallenbagel/jellyseerr:latest' Docker image and runs the Jellyseerr container.
+  # The container is named based on the JELLYSEERR_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  # The service mounts the following volumes:
+  #   - ${DOCKERCONFIG}/jellyseerr/config/config:/app/config
+  # The service exposes the following ports:
+  #   - ${JELLYSEERR_PORT}: The public HTTP port, usually 5055 for Jellyseerr
+  # The service is set to restart unless stopped.
+  jellyseerr:
+    image: 'fallenbagel/jellyseerr:latest'
+    container_name: ${JELLYSEERR_INSTANCE_NAME} #jellyseerr is the name of the container
+    volumes:
+      - ${DOCKERCONFIG}/jellyseerr/config/config:/app/config
+    ports:
+      - ${JELLYSEERR_PORT}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    labels:
+      - com.centurylinklabs.watchtower.monitor-only=true #Allow Watchtower to monitor this container but not update it
+    ports:
+      - ${JELLYSEERR_PORT} #Public HTTP Port usually 5055 for jellyseerr
+    restart: unless-stopped
+
+  # Watchtower Service
+  #
+  # This service runs the Watchtower application, which is a service that automatically updates Docker images on a regular interval.
+  # The service uses the 'containrrr/watchtower:latest' Docker image and runs the Watchtower container.
+  # The container is named based on the WATCHTOWER_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  # The service mounts the following volumes:
+  #   - /var/run/docker.sock:/var/run/docker.sock
+  # The service is set to restart unless stopped.
+  # Watchtower Service
+  #
+  # This service runs the Watchtower application, which is a service that automatically updates Docker images on a regular interval.
+  # The service uses the 'containrrr/watchtower:latest' Docker image and runs the Watchtower container.
+  # The container is named based on the WATCHTOWER_INSTANCE_NAME environment variable.
+  # The service sets the following environment variables:
+  #   - PUID: The user ID to run the container as
+  #   - PGID: The group ID to run the container as
+  #   - TZ: The timezone to use in the container
+  #   - WATCHTOWER_HTTP_API_TOKEN: The API token for the Watchtower HTTP API
+  #   - WATCHTOWER_NOTIFICATIONS: The notification method to use (e.g. 'email')
+  #   - WATCHTOWER_NOTIFICATIONS_EMAIL_FROM: The email address to send notifications from
+  #   - WATCHTOWER_NOTIFICATIONS_EMAIL_TO: The email address to send notifications to
+  #   - WATCHTOWER_NOTIFICATIONS_EMAIL_SERVER: The email server hostname or IP address
+  #   - WATCHTOWER_NOTIFICATIONS_EMAIL_PORT: The email server port
+  #   - WATCHTOWER_NOTIFICATIONS_EMAIL_USER: The email server username
+  #   - WATCHTOWER_NOTIFICATIONS_EMAIL_PASSWORD: The email server password
+  # The service mounts the following volumes:
+  #   - /var/run/docker.sock:/var/run/docker.sock
+  # The service is set to restart unless stopped.
+  watchtower:
+    image: 'containrrr/watchtower:latest'
+    container_name: ${WATCHTOWER_INSTANCE_NAME} #watchtower is the name of the container
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_HTTP_API_TOKEN}
+      - WATCHTOWER_NOTIFICATIONS= email
+      - WATCHTOWER_NOTIFICATIONS_EMAIL_FROM=${WATCHTOWER_NOTIFICATIONS_EMAIL_FROM}
+      - WATCHTOWER_NOTIFICATIONS_EMAIL_TO=${WATCHTOWER_NOTIFICATIONS_EMAIL_TO}
+      - WATCHTOWER_NOTIFICATIONS_EMAIL_SERVER=${WATCHTOWER_NOTIFICATIONS_EMAIL_SERVER}
+      - WATCHTOWER_NOTIFICATIONS_EMAIL_PORT=${WATCHTOWER_NOTIFICATIONS_EMAIL_PORT}
+      - WATCHTOWER_NOTIFICATIONS_EMAIL_USER=${WATCHTOWER_NOTIFICATIONS_EMAIL_USER}
+      - WATCHTOWER_NOTIFICATIONS_EMAIL_PASSWORD=${WATCHTOWER_NOTIFICATIONS_EMAIL_PASSWORD}
+    labels:
+    restart: unless-stopped #Restart the container if it stops
+
+
